@@ -123,6 +123,13 @@ input,select{background:none;border:0;outline:0;flex:1;min-width:0;font-size:16p
 .delay-option{padding:12px;border-radius:15px;background:#edf3fb;display:grid;gap:6px}.delay-option .b{padding:10px;font-size:14px}
 .transit-times{display:flex;flex-wrap:wrap;gap:8px}.transit-times label{flex:1;min-width:130px;padding:10px;display:grid;gap:3px}.transit-times input{width:100%}
 .metro-stop.bus-stop i{background:#a65b15}.pl.bus-track{stroke-width:4;stroke-dasharray:7 3}
+.bus-road,.bus-stops-geometry{fill:none;stroke:#a65b15;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}
+.bus-road{stroke-width:4}
+.bus-stops-geometry{stroke-width:4;stroke-opacity:.8}
+[data-bus-shape][data-state=ready] .bus-stops-geometry{display:none}
+.bus-shape-status{position:absolute;bottom:8px;left:10px;max-width:76%;padding:3px 6px;color:#455968;background:#fff;border-radius:6px;z-index:2}
+.nav-map .bus-shape-status{bottom:auto;top:102px}
+.day-map .mc>small.bus-shape-status:not([hidden]){display:block;top:12px;left:60px;bottom:auto}
 </style></head><body><div id="app"></div><div id="toast"></div><script>
 const $=s=>document.querySelector(s),A=$('#app'),z2=n=>String(n).padStart(2,'0');
 const f=n=>{n=(Math.round(n)%1440+1440)%1440;return z2(n/60|0)+':'+z2(n%60)},m=t=>{const q=t.split(':');return q[0]*60+ +q[1]};
@@ -146,7 +153,7 @@ const SC=()=>sched(S.order,S.sp,m(S.ds)),st=sc=>sc.r.some(x=>x.l&&x.k.ty=='fx')?
 const perms=a=>a.length<2?[a]:a.flatMap((x,i)=>perms([...a.slice(0,i),...a.slice(i+1)]).map(p=>[x,...p]));
 function best(){if(S.order.length>7)return null;let b=null;for(const p of perms(S.order)){const s=sched(p,S.sp,m(S.ds));if(!b||s.late<b.s.late||s.late==b.s.late&&(s.fin<b.s.fin||s.fin==b.s.fin&&s.tr<b.s.tr))b={p,s}}return b}
 function flexList(){const sc=SC();return sc.r.filter(x=>x.k.ty=='fl').map(x=>{const k=x.k,old=k.t,rec=f(Math.ceil(x.ar/5)*5);k.t=rec;const ok=!SC().late;k.t=old;return{id:k.id,n:k.name,t:old,du:k.du,rec,why:'Вы приедете в '+f(x.ar)+' — '+(x.l?'позже':'раньше')+' заданного времени. '+(ok?'С этим временем вы успеете ко всем делам.':'Одного этого изменения недостаточно.')}})}
-const rt=(a,b,v)=>roadLeg(a,b)?.line || (v
+const rt=(a,b,v)=>busAwareLine(roadLeg(a,b)) || (v
  ? [[a.x,a.y],[a.x,b.y],[b.x,b.y]]
  : [[a.x,a.y],[b.x,a.y],[b.x,b.y]]);
 const pl=p=>p.map(q=>q.join(',')).join(' ');
@@ -242,7 +249,7 @@ al:()=>{S.jam[S.jm.id]-=S.jm.A;S.alt=S.jm.id;S.jm=null;go(10)},kp:()=>{S.jm=null
 nx:()=>{const l=S.log[S.log.length-1];S.pos=P(l.id);S.dep=l.end;S.cur++;S.prog=0;S.alt=0;S.cur>=S.order.length?go(11):go(8)}};
 let renderedScreen;
 function draw(){const scroll=renderedScreen==S.scr?(A.querySelector(".s")?.scrollTop||0):0;clearInterval(T);clearTimeout(T2);let h;try{h=V[S.scr]()}catch(e){console.error(e);S.scr=S.tasks.length?3:2;S.sheet=null;h=V[S.scr]()}
-A.innerHTML=h+(S.sheet?sheet():'');renderedScreen=S.scr;observeDayMap();
+A.innerHTML=h+(S.sheet?sheet():'');renderedScreen=S.scr;observeDayMap();syncBusShapes();
 const panel=A.querySelector('.s');if(panel)panel.scrollTop=scroll;save();
 if(S.scr==5)T2=setTimeout(()=>{S.calc++;S.calc>4?fin():draw()},800);
 if(S.scr==8&&!S.sheet&&!S.jm&&!mapGesture)T=setInterval(step,1000)}
@@ -438,6 +445,11 @@ async function getJSON(url){
   return res.json();
 }
 let lastRouteRequest=0;
+async function reserveRouteRequest(){
+  const now=Date.now(),slot=Math.max(now,lastRouteRequest+1050);
+  lastRouteRequest=slot;
+  if(slot>now)await new Promise(resolve=>setTimeout(resolve,slot-now));
+}
 async function loadRoadLeg(a,b,mode){
   const existing=roadLeg(a,b,mode);
   if(existing)return existing;
@@ -445,9 +457,7 @@ async function loadRoadLeg(a,b,mode){
   return (await fetchRoadRoutes(a,b,mode))[0];
 }
 async function fetchRoadRoutes(a,b,mode,alternatives=false){
-  const pause=Math.max(0,1050-(Date.now()-lastRouteRequest));
-  if(pause)await new Promise(resolve=>setTimeout(resolve,pause));
-  lastRouteRequest=Date.now();
+  await reserveRouteRequest();
   const car=mode==='car',profile=car?'driving':'foot';
   const url=`https://routing.openstreetmap.de/routed-${car?'car':'foot'}/route/v1/${profile}/${a.lon},${a.lat};${b.lon},${b.lat}?overview=full&geometries=geojson&radiuses=150;150${alternatives?"&alternatives=3":""}`;
   const res=await getJSON(url);
@@ -852,7 +862,7 @@ function metroRoute(a,b,disruption=null){
 }
 function legMarkup(leg,line){
   if(!leg?.metro)return `<polyline class=pl points="${pl(line)}"/>`;
-  return leg.segments.map(s=>`<polyline class="pl ${s.kind==='ride'?'metro-track':s.kind==='bus'?'bus-track':'metro-walk'}" ${s.color?`style="stroke:${s.color}"`:''} points="${pl(s.path)}"/>`).join('');
+  return leg.segments.map(s=>s.kind==='bus'?busPathMarkup(s):`<polyline class="pl ${s.kind==='ride'?'metro-track':'metro-walk'}" ${s.color?`style="stroke:${s.color}"`:''} points="${pl(s.path)}"/>`).join('');
 }
 function metroSteps(leg){
   if(!leg?.metro)return '';
@@ -866,7 +876,7 @@ function metroSteps(leg){
     return `<div class=metro-stop><b><i style="background:${color}"></i>${number} · ${esc(name)}</b><small>${g.stations.map(esc).join(' → ')}</small></div>`;
   }).join('')}
   ${walkOut?`<small>После выхода пешком ≈ ${walkOut} мин</small>`:''}
-  <small>${leg.transit?'Автобусы — плановое расписание. Время метро и пеших переходов оценочное. Автобусные линии на карте соединяют остановки схематично.':'Время поездки и пешие участки приблизительные. Расписание поездов пока не подключено.'}</small>
+  <small>${leg.transit?'Автобусы — плановое расписание. Время метро и пеших переходов оценочное. Автобусный путь на карте рассчитан по дорогам OpenStreetMap через остановки.':'Время поездки и пешие участки приблизительные. Расписание поездов пока не подключено.'}</small>
   ${leg.transit?'<small><a href="https://mobilitydatabase.org/feeds/gtfs/mdb-3226" target="_blank" rel="noopener">Источник расписания · Московский транспорт, GTFS</a></small>':''}
   </details>`;
 }
@@ -1044,7 +1054,8 @@ function delayScreen(){
   const deadline=m(k.t),eta=S.dep+base.minutes+(S.jam[k.id]||0);
   const options=j.options||[],fast=options[0],affected=j.affected||[];
   const v=fit(routePoints(fast?base.line.concat(fast.line):base.line),1.7);
-  const layer=`<polyline class="pl g" points="${pl(base.line)}"/>${affected.length?`<polyline class="pl o" points="${pl(affected)}"/>`:''}${fast?legMarkup(fast,fast.line):''}${mk(k,'',v.u,1,k.id)}`;
+  const hasBus=base.segments?.some(s=>s.kind==='bus');
+  const layer=`${hasBus?`<g opacity=".46">${legMarkup(base,base.line)}</g>`:`<polyline class="pl g" points="${pl(base.line)}"/>`}${affected.length&&!hasBus?`<polyline class="pl o" points="${pl(affected)}"/>`:''}${fast?legMarkup(fast,fast.line):''}${mk(k,'',v.u,1,k.id)}`;
   return `<div class=s>
     <div class=c style="background:var(--ob)"><b>Задержка +${j.J} мин · симуляция</b></div>
     <h1>${j.loading?'Ищем объезд или пересадку':fast?(fast.eta<=deadline?'Есть маршрут, чтобы успеть':'Найден более быстрый маршрут'):'Более быстрый маршрут не найден'}</h1>
@@ -1326,6 +1337,97 @@ function matchBusStops(q){
     if(!name.includes(needle)||seen.has(p.name))return false;
     seen.add(p.name);return true;
   }).slice(0,7).map(p=>({...p,name:'ост. '+p.name}));
+}
+
+
+
+const busShapeByStops=new Map(),busShapeById=new Map();
+let nextBusShapeId=0,busShapeQueue=Promise.resolve();
+
+function busShape(stops){
+  const key=stops.map(p=>p.map(n=>n.toFixed(6)).join(',')).join(';');
+  if(busShapeByStops.has(key))return busShapeByStops.get(key);
+  const entry={id:++nextBusShapeId,stops,state:'idle'};
+  busShapeByStops.set(key,entry);
+  busShapeById.set(entry.id,entry);
+  return entry;
+}
+function stopLonLat([x,y]){
+  const lon=x/16384*360-180;
+  const lat=Math.atan(Math.sinh(Math.PI*(1-y/8192)))*180/Math.PI;
+  return [lon,lat].map(n=>n.toFixed(6)).join(',');
+}
+async function busRoadLines(stops){
+  const pairs=stops.map(stopLonLat).filter((p,i,a)=>i===0||p!==a[i-1]);
+  const lines=[];
+  const size=24;
+  for(let i=0;i<pairs.length-1;i+=size-1){
+    const chunk=pairs.slice(i,i+size);
+    await reserveRouteRequest();
+    const queue=chunk.join(';');
+    const radiuses=chunk.map(()=>150).join(';');
+    const query=`https://routing.openstreetmap.de/routed-car/route/v1/driving/${queue}?overview=full&geometries=geojson&radiuses=${radiuses}&continue_straight=true`;
+    const response=await getJSON(query);
+    const route=response.routes?.[0],line=route?.geometry?.coordinates;
+    if(response.code!=='Ok'||!Array.isArray(line)||line.length<2)throw Error('Не удалось восстановить путь по дорогам.');
+    lines.push(projectLine(line));
+  }
+  return lines;
+}
+function busPathMarkup(segment){
+  const shape=busShape(segment.path);
+  const pointDots=segment.path.map(([x,y])=>`M ${x} ${y} h .000001`).join(' ');
+  return `<g data-bus-shape=${shape.id}>
+    <path class=bus-stops-geometry d="${pointDots}"></path>
+    <path class="bus-track bus-road" d=""></path>
+  </g>`;
+}
+function paintBusShape(el,entry){
+  el.dataset.state=entry.state;
+  if(entry.state==='ready'){
+    const geometry=entry.lines.map(line=>'M'+line.map(p=>p.join(' ')).join('L')).join(' ');
+    const path=el.querySelector('.bus-road');
+    if(path.getAttribute('d')!==geometry)path.setAttribute('d',geometry);
+  }
+}
+function syncBusShapes(){
+  const maps=new Map();
+  for(const el of A.querySelectorAll('[data-bus-shape]')){
+    const shape=busShapeById.get(Number(el.dataset.busShape));
+    if(!shape)continue;
+    if(shape.state==='idle'){
+      shape.state='loading';
+      busShapeQueue=busShapeQueue.then(async()=>{
+        try{
+          shape.lines=await busRoadLines(shape.stops);
+          shape.state=shape.lines.length?'ready':'unavailable';
+        }catch{shape.state='unavailable';}
+        syncBusShapes();
+      });
+    }
+    paintBusShape(el,shape);
+    const wrap=el.closest('.mc,.wait-map,.nav-map');
+    if(wrap){
+      if(!maps.has(wrap))maps.set(wrap,new Set());
+      maps.get(wrap).add(shape.state);
+    }
+  }
+  for(const [wrap,states] of maps){
+    let badge=wrap.querySelector('.bus-shape-status');
+    if(!badge){badge=document.createElement('small');badge.className='bus-shape-status';wrap.append(badge);}
+    if(states.has('unavailable'))badge.textContent='Часть путей недоступна · показаны остановки';
+    else if(states.has('loading'))badge.textContent='Загружаем автобусный путь…';
+    else badge.textContent='';
+    badge.hidden=!badge.textContent;
+  }
+}
+function busAwareLine(leg){
+  if(!leg?.segments?.some(s=>s.kind==='bus'))return leg?.line;
+  return leg.segments.flatMap(segment=>{
+    if(segment.kind!=='bus')return segment.path;
+    const shape=busShape(segment.path);
+    return shape.state==='ready'?shape.lines.flat():segment.path;
+  });
 }
 
 
