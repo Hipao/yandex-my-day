@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ru" data-theme="light"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Яндекс. Мой день — прототип</title>
+<html lang="ru" data-theme="light"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Яндекс Карты — Мой день</title><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23fc3f1d' d='M12 1.5c-4.7 0-8.5 3.7-8.5 8.3 0 6 8.5 12.7 8.5 12.7s8.5-6.7 8.5-12.7C20.5 5.2 16.7 1.5 12 1.5z'/%3E%3Ccircle cx='12' cy='9.8' r='3.4' fill='%23fff'/%3E%3C/svg%3E">
 <style>
 :root{--bg:#fff;--pg:#e9edf5;--cd:#f1f3f7;--tx:#1b1f2a;--mu:#7b8190;--bl:#1f6bff;--rd:#e5484d;--or:#f5821f;--gr:#2b9e49;--gb:#e1f5e6;--ob:#fdebdc;--rb:#fde7e7;--yb:#fff2c9;--yt:#8a6100;--ln:#dde1ea;--mb:#dce6f0;--bd:#c7d4e2;--pk:#cde8c6;--sh:0 6px 24px #1b1f2a22;box-sizing:border-box;padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}
 @media(prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#14171d;--pg:#0b0d11;--cd:#232831;--tx:#eef0f4;--mu:#98a0b0;--gb:#1c3a26;--ob:#47311d;--rb:#472225;--yb:#4a3d14;--yt:#f0d37a;--ln:#394050;--mb:#262c36;--bd:#1e232c;--pk:#26402b;--sh:0 6px 24px #000a}}
@@ -130,6 +130,14 @@ input,select{background:none;border:0;outline:0;flex:1;min-width:0;font-size:16p
 .bus-shape-status{position:absolute;bottom:8px;left:10px;max-width:76%;padding:3px 6px;color:#455968;background:#fff;border-radius:6px;z-index:2}
 .nav-map .bus-shape-status{bottom:auto;top:102px}
 .day-map .mc>small.bus-shape-status:not([hidden]){display:block;top:12px;left:60px;bottom:auto}
+
+.yw{font-weight:800;letter-spacing:-.3px;color:var(--tx)}.yw b{color:#fc3f1d;font-weight:800}
+.ybadge{display:inline-flex;align-items:center;gap:7px;margin-top:10px;padding:7px 12px 7px 9px;border-radius:14px;background:#fffffff7;color:#1b1f2a;font-size:14px;font-weight:600;box-shadow:0 3px 13px #193a5421;border:1px solid #edf1f4}
+.ybadge .yw{color:#1b1f2a}
+.ybrand{display:flex;flex-direction:column;align-items:center;gap:8px;margin-top:6px}
+.ybrand .yw{font-size:20px}
+.ybrand .yline{display:flex;align-items:center;gap:6px;font-size:20px;font-weight:600}
+.ybrand .ybar{width:56px;height:5px;border-radius:5px;background:#fc3f1d;box-shadow:18px 0 0 #fc0 inset}
 </style></head><body><div id="app"></div><div id="toast"></div><script>
 const $=s=>document.querySelector(s),A=$('#app'),z2=n=>String(n).padStart(2,'0');
 const f=n=>{n=(Math.round(n)%1440+1440)%1440;return z2(n/60|0)+':'+z2(n%60)},m=t=>{const q=t.split(':');return q[0]*60+ +q[1]};
@@ -168,9 +176,9 @@ const pill=(sc,g)=>{const s=st(sc);return`<div class="p ${s}">${s=='g'?'✓ '+(g
 const TL=(sc,dn)=>`<div class=t>${dn.map(l=>`<div class="ti dn"><i style="background:var(--gr)"></i><b>${esc(P(l.id).name)}</b><small>выполнено · прибытие в ${f(l.ar)}</small></div>`).join('')}<div class=ti><i></i><b>${f(sc.r[0].dep)} — ${dn.length?'Отправление':'Выход'}${!dn.length&&S.start?': '+esc(S.start):''}</b><small>${sc.r[0].tv} мин в пути · ${sc.r[0].d.toFixed(1)} км · ${MN[S.mode]}</small></div>${sc.r.map((x,i)=>`<div class="ti${x.l?' lt':''}"><i></i><b>${f(x.st)} — ${esc(x.k.name)}</b><small>${x.k.ty=='fx'?'Фиксированное':'Гибкое'} · ${x.k.du?'пребывание '+x.k.du+' мин':'пребывание: не указано'}${x.l?' · опоздание '+x.l+' мин':''}</small>${sc.r[i+1]?`<small>→ выход в ${f(sc.r[i+1].dep)} · ${sc.r[i+1].tv} мин в пути · ${sc.r[i+1].d.toFixed(1)} км</small>`:''}</div>`).join('')}<div class=ti><i style="border-radius:3px"></i><b>${f(sc.fin)} — Конец маршрута</b></div></div>`;
 const MAPC=(sc,from)=>{const p=[from,...sc.r.map(x=>x.k)],v=fit(p.flatMap((point,i)=>i?routePoints(rt(p[i-1],point,0)):[point]),1.8),u=v.u;let h='';for(let i=1;i<p.length;i++)h+=legMarkup(roadLeg(p[i-1],p[i]),rt(p[i-1],p[i],0));p.forEach((q,i)=>h+=i?mk(q,i,u,i==p.length-1,q.id):`<circle class=k0 cx=${q.x} cy=${q.y} r=${8*u} stroke-width=${2*u} />`);return`<div class=mc>${MAP(v,h)}<small style="position:absolute;left:10px;bottom:6px;background:var(--bg);padding:2px 8px;border-radius:8px">${S.real?"Нажмите на метку":"Схема · нажмите на метку"}</small></div>`};
 const PLAN=(...args)=>dayPanel(...args);
+const ylogo=s=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" aria-hidden="true" style="flex:none"><path fill="#fc3f1d" d="M12 1.5c-4.7 0-8.5 3.7-8.5 8.3 0 6 8.5 12.7 8.5 12.7s8.5-6.7 8.5-12.7C20.5 5.2 16.7 1.5 12 1.5z"/><circle cx="12" cy="9.8" r="3.4" fill="#fff"/></svg>`;
 const V={};
-V[1]=()=>{const v=fit([{x:2,y:2},{x:8,y:8}],.5,S.z);return`<div class=mp>${MAP(v,`<g transform="translate(5 5) scale(${v.u*16})"><path class=ar d="M0-1L.7 .8 0 .45-.7 .8z" /></g>`)}</div><div class=top><div class="c w" style="border-radius:22px;padding:16px 18px;cursor:pointer" data-a=tab data-v=0>${ic('se')}<span style="flex:1;color:var(--mu)">Поиск мест и адресов</span>${ic('mic')}</div></div>${FS()}<small style="position:absolute;left:14px;bottom:84px;background:var(--bg);padding:2px 8px;border-radius:8px">демо-карта</small>${nav(2)}`};
-V[2]=()=>{const h=S.tasks.length;return`<div class=s style="align-items:center;text-align:center"><span data-a=go data-v=1 style="align-self:flex-end;cursor:pointer">${ic('x')}</span><div style="color:var(--bl)">${ic('cal',84)}</div><h1>Яндекс. Мой день</h1><div style="font-size:17px">Постройте маршрут<br>без опозданий</div>
+V[2]=()=>{const h=S.tasks.length;return`<div class=s style="align-items:center;text-align:center"><span data-a=go data-v=1 style="align-self:flex-end;cursor:pointer">${ic('x')}</span><div class=ybrand>${ylogo(84)}<div class=yline><span class=yw><b>Я</b>ндекс</span> Карты</div><div class=ybar></div></div><h1>Яндекс. Мой день</h1><div style="font-size:17px">Постройте маршрут<br>без опозданий</div>
 <label class=c data-a=dp style="position:relative;border-radius:22px;font-weight:600;cursor:pointer">${ic('cal')}${dl(S.date)} ⌄<input type=date name=date data-r=1 min="${iso(new Date())}" value="${S.date}" style="position:absolute;inset:0;opacity:0;width:100%"></label>
 ${h?`<div class="c w" style="align-self:stretch;text-align:left"><div style="flex:1"><b>Сохранённое расписание</b><br><small>${h} дел · ${dl(S.date)}</small></div></div>`:''}
 <div style="align-self:stretch;text-align:left;display:flex;flex-direction:column;gap:8px"><b style="font-size:17px">Как это работает</b>${['Добавьте места и время прибытия','Мы рассчитаем маршрут и время выхода','Предупредим о задержках и пересчитаем план'].map(t=>`<div class=c style="padding:11px 14px">${ic('ch')}${t}</div>`).join('')}</div>
@@ -198,10 +206,10 @@ ${k.ty=='fx'?'<div class=err>Это фиксированное дело — ег
 V[7]=()=>{const sc=SC();return PLAN(sc,dl(S.date)=='Сегодня'?'Ваш план на сегодня':dl(S.date)=='Завтра'?'Ваш план на завтра':'Ваш план · '+dl(S.date),pill(sc),[],S.sp,'<button class=b data-a=st>Начать маршрут</button><button class="b o" data-a=go data-v=3>Изменить план</button>')};
 V[8]=()=>{const sc=sched(S.order.slice(S.cur),S.pos,S.dep,1),r=sc.r[0],k=r.k,ps=rt(S.pos,k,S.alt==k.id?1:0),q=along(ps,S.prog),v=fit(routePoints(ps),.5,S.z),u=v.u,rem=1-S.prog,rd=rem*r.d,nx=sc.r[1],dm=Math.max(20,Math.round(Math.min(rd*1000,60+rd*1000%450)/10)*10);
 const h=`${legMarkup(roadLeg(S.pos,k),ps)}${!S.real&&S.jam[k.id]&&S.alt!=k.id?`<polyline class="pl o" points="${pl([ps[1],ps[2]])}" />`:''}${mk(k,'',u,1,k.id)}<g transform="translate(${q.x} ${q.y}) rotate(${q.ang}) scale(${u*15})"><path class=ar d="M0-1L.7 .8 0 .45-.7 .8z" /></g>`;
-return`<div class="mp nav-map">${MAP(v,h)}</div><div class=top><div style="background:var(--bl);color:#fff;border-radius:20px;padding:12px 20px;display:inline-flex;gap:14px;align-items:center"><span style="font-size:32px">↑</span><div><b style="font-size:26px">${S.real?"К точке":dm+" м"}</b><br><small style="color:#dbe7ff">${rd<.05?"вы на месте":S.mode==="metro"?"Московское метро":S.real?"по маршруту":"по схеме"}</small></div></div></div>${FS()}<div style="position:absolute;left:0;right:0;bottom:0;background:var(--bg);border-radius:26px 26px 0 0;padding:16px 20px 18px;box-shadow:var(--sh);display:flex;flex-direction:column;gap:8px"><div style="display:flex;align-items:center;gap:12px"><div style="flex:1"><b style="font-size:20px">${Math.max(1,Math.ceil(rem*r.tv))} мин · ${rd.toFixed(1)} км</b><br><span class=mu>Прибытие в ${f(r.ar)} · ${esc(k.name)}</span></div><button class=fb data-a=cnf data-v=stop>${ic('x')}</button></div><small>${nx?'Дальше: '+esc(nx.k.name)+' (к '+nx.k.t+')':'Последняя точка дня'} · точка ${S.cur+1} из ${S.order.length} · демо-движение</small><div class=tg><button data-a=arr>Имитировать прибытие</button><button data-a=jam>Смоделировать задержку</button><button data-a=go data-v=10>Весь план</button></div></div>`};
+return`<div class="mp nav-map">${MAP(v,h)}</div><div class=top><div style="background:var(--bl);color:#fff;border-radius:20px;padding:12px 20px;display:inline-flex;gap:14px;align-items:center"><span style="font-size:32px">↑</span><div><b style="font-size:26px">${S.real?"К точке":dm+" м"}</b><br><small style="color:#dbe7ff">${rd<.05?"вы на месте":S.mode==="metro"?"Московское метро":S.real?"по маршруту":"по схеме"}</small></div></div></div>${FS()}<div style="position:absolute;left:0;right:0;bottom:0;background:var(--bg);border-radius:26px 26px 0 0;padding:16px 20px 18px;box-shadow:var(--sh);display:flex;flex-direction:column;gap:8px"><div style="display:flex;align-items:center;gap:12px"><div style="flex:1"><b style="font-size:20px">${Math.max(1,Math.ceil(rem*r.tv))} мин · ${rd.toFixed(1)} км</b><br><span class=mu>Прибытие в ${f(r.ar)} · ${esc(k.name)}</span></div><button class=fb data-a=cnf data-v=stop>${ic('x')}</button></div><small>${nx?'Дальше: '+esc(nx.k.name)+' (к '+nx.k.t+')':'Последняя точка дня'} · точка ${S.cur+1} из ${S.order.length} · имитация поездки</small><div class=tg><button data-a=arr>Имитировать прибытие</button><button data-a=jam>Смоделировать задержку</button><button data-a=go data-v=10>Весь план</button></div></div>`};
 V[9]=delayScreen;
 V[10]=()=>{const sc=sched(S.order.slice(S.cur),S.pos,S.dep,S.waiting?0:1);return PLAN(sc,Object.keys(S.jam).length?'Ваш план обновлён':'Ваш план',pill(sc,'Теперь вы успеваете'),S.log,S.pos,'<button class=b data-a=go data-v=8>Продолжить маршрут</button><button class="b o" data-a=go data-v=3>Изменить план</button>')};
-V[11]=()=>{const L=S.log,n=L.length,ds=L.reduce((a,x)=>a+x.d,0),tv=L.reduce((a,x)=>a+x.tv,0),lt=L.filter(x=>x.l),fe=n?L[n-1].end:0;return`<div class=s style="align-items:center;text-align:center;justify-content:center"><div style="width:110px;height:110px;border-radius:50%;background:var(--gr);color:#fff;font-size:56px;display:grid;place-items:center;box-shadow:0 0 0 18px var(--gb)">✓</div><h1 style="margin-top:20px">Ваш день завершён!</h1><div style="font-size:17px">${lt.length?'Были опоздания: '+lt.length+' из '+n+' дел, суммарно '+lt.reduce((a,x)=>a+x.l,0)+' мин':'Все дела выполнены по плану'}</div><div class=c style="display:block;align-self:stretch;text-align:left;line-height:1.8">Посещено точек: <b>${n}</b><br>Пройденный путь: <b>${ds.toFixed(1)} км</b> (демо)<br>Время в дороге: <b>${tv} мин</b><br>Выполнено дел: <b>${n}</b><br>Завершение дня: <b>${f(fe)}</b></div><button class="b o" data-a=np>Новый план</button><button class="b l" data-a=go data-v=1>На карту</button></div>`};
+V[11]=()=>{const L=S.log,n=L.length,ds=L.reduce((a,x)=>a+x.d,0),tv=L.reduce((a,x)=>a+x.tv,0),lt=L.filter(x=>x.l),fe=n?L[n-1].end:0;return`<div class=s style="align-items:center;text-align:center;justify-content:center"><div style="width:110px;height:110px;border-radius:50%;background:var(--gr);color:#fff;font-size:56px;display:grid;place-items:center;box-shadow:0 0 0 18px var(--gb)">✓</div><h1 style="margin-top:20px">Ваш день завершён!</h1><div style="font-size:17px">${lt.length?'Были опоздания: '+lt.length+' из '+n+' дел, суммарно '+lt.reduce((a,x)=>a+x.l,0)+' мин':'Все дела выполнены по плану'}</div><div class=c style="display:block;align-self:stretch;text-align:left;line-height:1.8">Посещено точек: <b>${n}</b><br>Пройденный путь: <b>${ds.toFixed(1)} км</b> по плану<br>Время в дороге: <b>${tv} мин</b><br>Выполнено дел: <b>${n}</b><br>Завершение дня: <b>${f(fe)}</b></div><button class="b o" data-a=np>Новый план</button><button class="b l" data-a=go data-v=1>На карту</button></div>`};
 function sheet(){const s=S.sheet,b=(l,a,v,c)=>`<button class="b ${c||''}" data-a=${a}${v!=null?' data-v='+v:''}>${l}</button>`,fl=S.tasks.some(k=>k.ty=='fl');let h='';
 if(s.t=='del')h=`<h2>Удалить дело?</h2>${b('Удалить','dl2')}${b('Отмена','cl','','g')}`;
 if(s.t=='cnf'){const c={keep:['Оставить план как есть?','Расписание содержит риск опоздания, статус «Всё успеваете» показан не будет.','Да, оставить','keep'],np:['Создать новый план?','Текущий план будет удалён.','Удалить и создать','np'],stop:['Прервать маршрут?','План сохранится — вы сможете продолжить позже.','Вернуться к плану','go10']}[s.v];h=`<h2>${c[0]}</h2><div class=mu>${c[1]}</div>${b(c[2],c[3])}${b(s.v=='stop'?'Продолжить движение':'Отмена','cl','','g')}`}
@@ -219,7 +227,7 @@ function fin(){S.calc=0;go(SC().late?6:7)}
 function arrive(){const r=sched(S.order.slice(S.cur),S.pos,S.dep,1).r[0],k=r.k;if(!S.log.some(l=>l.id==k.id))S.log.push({id:k.id,tv:r.tv,d:r.d,l:r.l,end:r.end,ar:r.ar});S.prog=1;S.sheet={t:'arr',n:k.name,du:k.du,end:r.end,l:r.l}}
 function step(){S.prog=Math.min(1,S.prog+.05);if(S.prog>=1)arrive();draw()}
 const ACT={go:v=>go(+v),cl:()=>{S.sheet=null;draw()},tab:v=>v==2?go(2):(S.sheet={t:'tab',n:['Поиск','Маршруты','','Профиль'][v]},draw()),
-zi:()=>{S.z=Math.min(4,S.z*1.4);draw()},zo:()=>{S.z=Math.max(.5,S.z/1.4);draw()},loc:()=>{S.z=1;draw();flash('Демо: геолокация не подключена, показано условное положение')},
+zi:()=>{S.z=Math.min(4,S.z*1.4);draw()},zo:()=>{S.z=Math.max(.5,S.z/1.4);draw()},loc:()=>{S.z=1;draw();flash('Геолокация недоступна — показано примерное положение')},
 dp:(v,b)=>{const i=b.querySelector('input');try{i.showPicker()}catch(e){i.focus()}},
 new:()=>{S.ds=S.date==iso(new Date())?f(Math.ceil(nowM()/5)*5):'08:30';go(3)},cnf:v=>{S.sheet={t:'cnf',v};draw()},
 np:()=>{const d=S.date<iso(new Date())?iso(new Date()):S.date;S=fresh();S.date=d;go(2)},
@@ -242,7 +250,7 @@ acc:()=>{S.order=S.sheet.p;fin()},fx:()=>{S.sheet={t:'fl',rows:flexList()};draw(
 pk:id=>{const r=S.sheet.rows.find(x=>x.id==id);S.tmp=r.rec;S.sheet={t:'edt',id,n:r.n};draw()},
 sv:()=>{const k=P(S.sheet.id);if(S.tmp)k.t=S.tmp;calc(1)},keep:()=>{S.keep=1;go(7)},
 st:()=>{const sc=SC();S.cur=0;S.log=[];S.pos=S.sp;S.dep=sc.r[0].dep;S.tripLeg=sc.r[0].leg?{...sc.r[0].leg,key:legKey(S.sp,sc.r[0].k)}:null;S.prog=0;S.alt=0;go(8)},
-pin:id=>{const k=P(id);k&&flash(k.name+' — адрес: '+k.addr+' (демо-координаты)')},
+pin:id=>{const k=P(id);k&&flash(k.name+' — адрес: '+k.addr)},
 arr:()=>{arrive();draw()},
 jam:()=>{const r=sched(S.order.slice(S.cur),S.pos,S.dep,1).r[0],J=S.demo?14:Math.max(10,Math.round(r.tv*(1-S.prog)*.8)),A2=S.mode=='car'?Math.max(3,Math.round(J*.5)):0;S.jm={id:r.k.id,J,A:A2,old:r.ar};S.jam[r.k.id]=(S.jam[r.k.id]||0)+J;go(9)},
 al:()=>{S.jam[S.jm.id]-=S.jm.A;S.alt=S.jm.id;S.jm=null;go(10)},kp:()=>{S.jm=null;go(10)},go10:()=>go(10),
@@ -347,10 +355,12 @@ const marker=(x,y,u)=>`<circle cx=${x} cy=${y} r=${9*u} class=k0 stroke-width=${
 const roadPattern=()=>`<defs><pattern id=roads width=1.5 height=1.75 patternUnits=userSpaceOnUse><rect width=1.5 height=1.75 fill="#dce6f0"/><rect x=.14 y=.14 width=1.22 height=1.46 rx=.09 fill="#c7d4e2"/><path d="M0 0h1.5M0 0v1.75M0 1.75h1.5M1.5 0v1.75" fill="none" stroke="#fff" stroke-width=".20"/></pattern></defs><rect x=-200 y=-200 width=400 height=400 fill="url(#roads)"/>`;
 function tileLayer(v,view){
   if(!onlineTiles)return '';
-  const level=Math.max(5,Math.min(19,Math.round(14+Math.log2(1/(v.w/view.zoom)))));
-  const size=2**(14-level),world=2**level;
+  let level=Math.max(5,Math.min(19,Math.round(16+Math.log2(view.zoom/v.w))));
   const {x,y}=worldCenter(v,view);
   const radius=Math.hypot(v.w,v.h)*.52/view.zoom;
+  // Reduce detail when the viewport would load too many tiles.
+  while(level>5&&(2*radius/2**(14-level)+2)**2>49)level--;
+  const size=2**(14-level),world=2**level;
   let tiles='';
   for(let i=Math.max(0,Math.floor((x-radius)/size));i<Math.min(world,(x+radius)/size);i++){
     for(let j=Math.max(0,Math.floor((y-radius)/size));j<Math.min(world,(y+radius)/size);j++){
@@ -522,6 +532,7 @@ V[1]=()=>{
   const p=selectedPlace(),v=S.cityOverview?cityFrame():moscowFrame(p);
   return `<div class="mp map-home">${interactiveMap(v,marker(p.x,p.y,v.u),true,'screen-1')}</div>
 <div class=top><button class="c w place-result map-search" data-a=lookup data-v=browse>${ic('se')} Поиск мест и адресов</button>
+<div class=ybadge title="Учебный прототип">${ylogo(20)}<span><span class=yw><b>Я</b>ндекс</span> Карты</span></div>
 ${S.mapPlace?`<div class="map-card" style="margin-top:8px"><h2>${esc(p.name)}</h2><small>${esc(p.address||'')}</small><div class=chips><button data-a=routehere>Маршрут сюда</button><button data-a=addhere>Добавить в день</button></div></div>`:''}</div>
 <button class="map-limits city-button" data-a=city>Вся Москва</button>
 ${mapControls()}${navTab(-1)}`;
@@ -529,7 +540,7 @@ ${mapControls()}${navTab(-1)}`;
 V[12]=()=>`<div class=s><button class="b l" data-a=searchback>‹ Назад</button><h1>Поиск мест и адресов</h1>
 <form class=loc-search id=find-place><label class=c>${ic('se')}<input name=placequery aria-label="Название или адрес" placeholder="Название или адрес" value="${esc(search.query)}" required></label>
 <button class=b>Найти</button></form>
-<p class=search-meta>Примеры и сохранённые точки доступны без интернета. По другим запросам поиск идёт через Photon.</p>
+<p class=search-meta>Примеры и сохранённые точки доступны без интернета.</p>
 ${search.message?`<small role=status>${esc(search.message)}</small>`:''}
 ${search.results.map((p,i)=>`<button class="c place-result" data-a=result data-v=${i}>${ic('pin')}<span><b>${esc(p.name)}</b><br><small>${esc(p.address||'')}</small></span></button>`).join('')}
 </div>${navTab(0)}`;
@@ -914,7 +925,7 @@ function dayPanel(sc,title,status,completed,from,buttons){
       </button>
       <div class=day-departure>
         <div><span class=day-label>${active?'Выход по плану':'Время выхода'}</span><strong>${f(next.dep)}</strong></div>
-        <div><span class=day-label>${waiting?'До выхода · демо':'До выхода'}</span><b data-day-clock=${next.dep}>${dayCountdown(next.dep)}</b></div>
+        <div><span class=day-label>До выхода</span><b data-day-clock=${next.dep}>${dayCountdown(next.dep)}</b></div>
       </div>
       <div class=day-scroll id=day-details ${collapsed?'hidden':''}>
         ${sc.r.map((r,i)=>`<div class=day-next>
@@ -1057,7 +1068,7 @@ function delayScreen(){
   const hasBus=base.segments?.some(s=>s.kind==='bus');
   const layer=`${hasBus?`<g opacity=".46">${legMarkup(base,base.line)}</g>`:`<polyline class="pl g" points="${pl(base.line)}"/>`}${affected.length&&!hasBus?`<polyline class="pl o" points="${pl(affected)}"/>`:''}${fast?legMarkup(fast,fast.line):''}${mk(k,'',v.u,1,k.id)}`;
   return `<div class=s>
-    <div class=c style="background:var(--ob)"><b>Задержка +${j.J} мин · симуляция</b></div>
+    <div class=c style="background:var(--ob)"><b>Задержка +${j.J} мин · сценарий проверки</b></div>
     <h1>${j.loading?'Ищем объезд или пересадку':fast?(fast.eta<=deadline?'Есть маршрут, чтобы успеть':'Найден более быстрый маршрут'):'Более быстрый маршрут не найден'}</h1>
     <small>${esc(k.name)} · нужно к ${k.t}. По текущему маршруту прибытие в ${f(eta)}.</small>
     <div class=mc>${MAP(v,layer)}</div>
